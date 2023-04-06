@@ -1,0 +1,83 @@
+plugins {
+    id 'java'
+    id 'org.jetbrains.kotlin.jvm' version '1.7.20'
+    id 'io.qameta.allure' version '2.11.2'
+}
+
+group 'ru.olymponline'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+    maven {
+        url 'https://packages.atlassian.com/mvn/maven-atlassian-external/'
+    }
+    maven {
+        url "http://51.250.25.39:8082/artifactory/talenttech"
+        credentials {
+            username "readonly"
+            password "kOi3EJ6v"
+        }
+        allowInsecureProtocol true
+    }
+    maven { url "https://plugins.gradle.org/m2/" }
+    gradlePluginPortal()
+}
+
+
+dependencies {
+    implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.7.10'
+    // Зависимость нужна для отображения в Allure ассертов из junit5
+    implementation "io.qameta.allure:allure-junit5-assert:$allure_version"
+    implementation 'com.squareup.okhttp3:okhttp:5.0.0-alpha.10'
+    implementation 'com.squareup.okhttp3:logging-interceptor:5.0.0-alpha.10'
+    implementation 'com.google.code.gson:gson:2.10'
+    implementation 'com.jayway.jsonpath:json-path:2.7.0'
+    implementation 'org.slf4j:slf4j-simple:2.0.3'
+    implementation group: 'junit', name: 'junit', version: '4.13.2'
+    implementation group: 'com.google.protobuf', name: 'protobuf-java', version: '4.0.0-rc-2'
+    implementation "ru.talenttech.xqa:oknetwork:0.5.5"
+    implementation group: 'com.codeborne', name: 'selenide', version: '6.11.2'
+    implementation 'org.junit.jupiter:junit-jupiter-engine:5.9.2'
+    implementation group: 'io.github.serpro69', name: 'kotlin-faker', version: '1.13.0'
+    implementation 'org.testng:testng:7.7.0'
+    implementation 'org.json:json:20220924'
+}
+
+task downloadDependencies {
+    doLast {
+        configurations.findAll{it.canBeResolved}.each{it.resolve()}
+    }
+}
+
+allure {
+    autoconfigure = false
+    version = "2.19.0"
+
+    useJUnit5 {
+        version = "2.19.0"
+    }
+}
+
+// Таска для запуска тестов в директории app/src/test/kotlin/scenarios
+tasks.withType(Test) {
+    useJUnitPlatform {
+        String[] includeTagsList = Arrays.asList(System.getProperty("includeTags", "").split(","))
+            .stream()
+            .map { it.trim() }
+            .filter { !it.isEmpty() }
+            .toArray()
+        if (includeTagsList.size() != 0) {
+            includeTags(includeTagsList)
+        }
+    }
+
+    // Автоматическое обнаружение встроенных в библиотеки лисенеров для Junit5, например для allure и testrail
+    systemProperty "junit.jupiter.extensions.autodetection.enabled", "true"
+
+    // Выключена генерация отчета JUnit5
+    reports {
+        junitXml.enabled = false
+        html.enabled = false
+    }
+}
